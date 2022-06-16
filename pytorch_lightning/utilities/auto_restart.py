@@ -520,20 +520,22 @@ def _add_capture_metadata_collate(dataloader: DataLoader) -> None:
 
 
 def _reload_dataloader_state_dict_automatic_map_dataset(dataloader: DataLoader, state_dict: Dict[str, Any]) -> None:
-    iterator_state = state_dict["state"][0]
+    iterator_state = {}
+    for k, istate in state_dict['state'].items():
+        if not isinstance(istate, IteratorState):
+            istate = IteratorState.from_state_dict(istate)
+        iterator_state[k] = istate
 
-    if not isinstance(iterator_state, IteratorState):
-        iterator_state = IteratorState.from_state_dict(iterator_state)
-
+    lastest_worker_id = state_dict["latest_worker_id"]
     # reload sampler state
     ff_sampler = _find_fast_forward_samplers(dataloader)
-    ff_sampler.load_state_dict(iterator_state.sampler_state)
+    ff_sampler.load_state_dict(iterator_state[lastest_worker_id].sampler_state)
 
     # reload dataset state
     dataloader.dataset.load_state_dict(
-        iterator_state.dataset_state,
-        latest_worker_id=state_dict["latest_worker_id"],
-        num_workers=iterator_state.num_workers,
+        {k:istate.dataset_state[k] for k, istate in iterator_state.items()},
+        latest_worker_id=lastest_worker_id,
+        num_workers=iterator_state[0].num_workers,
     )
 
 
