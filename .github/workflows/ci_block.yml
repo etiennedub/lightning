@@ -4,6 +4,7 @@ name: Block app edits
 on:  # Trigger the workflow on PR to master
   pull_request:
     paths:
+      - docs/source-app/**
       - src/lightning_app/**
 
 jobs:
